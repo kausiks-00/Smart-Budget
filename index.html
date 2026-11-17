@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Budget</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f6fa;
+    color: #202b3c;
+}
+
+header {
+    background: #172b4d;
+    color: white;
+    padding: 25px;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 28px;
+}
+
+.container {
+    max-width: 850px;
+    margin: 30px auto;
+    padding: 15px;
+}
+
+.card {
+    background: white;
+    padding: 22px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px #00000010;
+}
+
+.balance {
+    background: #2459a6;
+    color: white;
+    text-align: center;
+}
+
+.balance h2 {
+    font-size: 36px;
+    margin: 12px;
+}
+
+.stats {
+    display: flex;
+    gap: 15px;
+}
+
+.stats .card {
+    flex: 1;
+    text-align: center;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 15px;
+}
+
+button {
+    background: #2459a6;
+    color: white;
+    border: none;
+    padding: 13px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 16px;
+}
+
+button:hover {
+    background: #173d78;
+}
+
+.expense {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #eee;
+    padding: 13px 0;
+}
+
+.negative {
+    color: #e04b4b;
+}
+
+.positive {
+    color: #20a36b;
+}
+
+.delete {
+    width: auto;
+    padding: 6px 12px;
+    background: #e04b4b;
+    margin-left: 10px;
+}
+
+@media(max-width: 500px) {
+    .stats {
+        flex-direction: column;
+        gap: 0;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>💰 Smart Budget</h1>
+    <p>Твой умный финансовый помощник</p>
+</header>
+
+<div class="container">
+
+    <div class="card balance">
+        <p>Общий баланс</p>
+        <h2 id="balance">0 ₸</h2>
+        <p>Контролируй свои финансы легко</p>
+    </div>
+
+    <div class="stats">
+        <div class="card">
+            <p>Доходы</p>
+            <h2 id="income" class="positive">0 ₸</h2>
+        </div>
+
+        <div class="card">
+            <p>Расходы</p>
+            <h2 id="expenses" class="negative">0 ₸</h2>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>➕ Добавить операцию</h3>
+
+        <input id="name" placeholder="Название операции">
+
+        <input id="amount" type="number"
+        placeholder="Сумма в тенге">
+
+        <select id="type">
+            <option value="expense">Расход</option>
+            <option value="income">Доход</option>
+        </select>
+
+        <select id="category">
+            <option>Продукты</option>
+            <option>Транспорт</option>
+            <option>Покупки</option>
+            <option>Развлечения</option>
+            <option>Зарплата</option>
+            <option>Другое</option>
+        </select>
+
+        <button onclick="addOperation()">
+            Добавить
+        </button>
+    </div>
+
+    <div class="card">
+        <h3>📊 История операций</h3>
+        <div id="history">Операций пока нет</div>
+    </div>
+
+</div>
+
+<script>
+let operations = JSON.parse(
+    localStorage.getItem("operations") || "[]"
+);
+
+function addOperation() {
+    let name = document.getElementById("name").value.trim();
+    let amount = Number(document.getElementById("amount").value);
+    let type = document.getElementById("type").value;
+    let category = document.getElementById("category").value;
+
+    if (!name || !Number.isFinite(amount) || amount <= 0) {
+        alert("Введите название и правильную сумму!");
+        return;
+    }
+
+    operations.push({
+        name,
+        amount,
+        type,
+        category,
+        id: Date.now()
+    });
+
+    localStorage.setItem("operations", JSON.stringify(operations));
+
+    document.getElementById("name").value = "";
+    document.getElementById("amount").value = "";
+
+    update();
+}
+
+function removeOperation(id) {
+    operations = operations.filter(item => item.id !== id);
+    localStorage.setItem("operations", JSON.stringify(operations));
+    update();
+}
+
+function update() {
+    let income = 0;
+    let expenses = 0;
+
+    operations.forEach(item => {
+        if (item.type === "income") {
+            income += item.amount;
+        } else {
+            expenses += item.amount;
+        }
+    });
+
+    document.getElementById("balance").textContent =
+        (income - expenses).toLocaleString("ru-RU") + " ₸";
+
+    document.getElementById("income").textContent =
+        income.toLocaleString("ru-RU") + " ₸";
+
+    document.getElementById("expenses").textContent =
+        expenses.toLocaleString("ru-RU") + " ₸";
+
+    let history = document.getElementById("history");
+
+    history.innerHTML = "";
+
+    if (operations.length === 0) {
+        history.textContent = "Операций пока нет";
+        return;
+    }
+
+    operations.slice().reverse().forEach(item => {
+        let row = document.createElement("div");
+        row.className = "expense";
+
+        let info = document.createElement("span");
+        info.textContent = item.name + " • " + item.category;
+
+        let details = document.createElement("span");
+        details.className = item.type === "income" ? "positive" : "negative";
+
+        details.textContent =
+            (item.type === "income" ? "+" : "-") +
+            item.amount.toLocaleString("ru-RU") + " ₸";
+
+        let del = document.createElement("button");
+        del.className = "delete";
+        del.textContent = "Удалить";
+        del.onclick = () => removeOperation(item.id);
+
+        row.append(info, details, del);
+        history.appendChild(row);
+    });
+}
+
+update();
+</script>
+
+</body>
+</html>
